@@ -75,7 +75,8 @@ jobs:
           trap 'rm -f "$keystore"' EXIT
           printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$keystore"
           tools="$ANDROID_HOME/build-tools/$ANDROID_BUILD_TOOLS"
-          unsigned=(app/build/outputs/apk/release/*-unsigned.apk)
+          shopt -s nullglob
+          unsigned=(app/build/outputs/apk/release/*.apk)
           test "${#unsigned[@]}" -eq 1
           "$tools/zipalign" -f -p 4 "${unsigned[0]}" "$RUNNER_TEMP/aligned.apk"
           mkdir -p dist
