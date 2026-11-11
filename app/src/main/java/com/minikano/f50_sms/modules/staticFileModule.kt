@@ -6,6 +6,7 @@ import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.defaultForFilePath
 import io.ktor.server.application.call
+import io.ktor.server.request.path
 import io.ktor.server.response.respond
 import io.ktor.server.response.respondBytes
 import io.ktor.server.routing.Route
@@ -17,7 +18,8 @@ fun Route.staticFileModule(context: Context) {
     val TAG = "[$BASE_TAG]_staticFileModule"
 
     get("{...}") {
-        val rawPath = call.parameters.getAll("...")?.joinToString("/")?.trim('/') ?: ""
+        // 上游 v3.9.5 改用 call.parameters 取路径，在 Ktor 2.3.9 下取不到，导致所有静态请求都返回首页
+        val rawPath = call.request.path().trim('/')
         val path = if (rawPath.isBlank()) "index.html" else rawPath
 
         if (path.contains("..")) {
