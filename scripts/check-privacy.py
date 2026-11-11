@@ -28,6 +28,9 @@ for directory in ("app/src/main/java", "app/frontEnd/public"):
 
 for apk in sys.argv[1:]:
     with ZipFile(apk) as archive:
+        required = {"assets/index.html", "assets/script/main.js", "assets/script/requests.js"}
+        missing = required.difference(archive.namelist())
+        failures.extend(f"{apk}: missing {name}" for name in sorted(missing))
         for name in archive.namelist():
             if name.endswith((".dex", ".js", ".html")):
                 check(name, archive.read(name))

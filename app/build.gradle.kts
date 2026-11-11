@@ -31,9 +31,9 @@ val npmBuild by tasks.registering(Exec::class) {
     }
 }
 
-// 让打包任务依赖这个 npm 构建
+// 前端资源必须在 Android 合并 assets 之前生成。
 tasks.configureEach {
-    if (name.startsWith("assemble") || name.startsWith("install") || name == "build") {
+    if (name == "preBuild") {
         dependsOn(npmBuild)
     }
 }
