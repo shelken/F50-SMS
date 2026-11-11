@@ -16,7 +16,6 @@ import androidx.core.app.NotificationCompat
 import com.minikano.f50_sms.configs.AppMeta
 import com.minikano.f50_sms.utils.KanoLog
 import com.minikano.f50_sms.utils.KanoUtils
-import com.minikano.f50_sms.utils.UniqueDeviceIDManager
 import com.minikano.f50_sms.utils.WakeLock
 import kotlin.concurrent.thread
 
@@ -48,8 +47,6 @@ class WebService : Service() {
     override fun onCreate() {
         super.onCreate()
         AppMeta.init(this)
-        // Application 或 Activity 启动时调用一次初始化：
-        UniqueDeviceIDManager.init(this)
         startForegroundNotification()
 
         //检测IP变动，适应用户ip网段更改

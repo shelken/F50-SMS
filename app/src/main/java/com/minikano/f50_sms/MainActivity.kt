@@ -48,7 +48,6 @@ import com.minikano.f50_sms.utils.DeviceModelChecker
 import com.minikano.f50_sms.utils.KanoLog
 import com.minikano.f50_sms.utils.KanoUtils
 import com.minikano.f50_sms.utils.ShellKano
-import com.minikano.f50_sms.utils.UniqueDeviceIDManager
 import com.minikano.f50_sms.utils.WakeLock
 import com.minikano.f50_sms.utils.getBooleanCompat
 import kotlinx.coroutines.Dispatchers
@@ -88,7 +87,6 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         AppMeta.init(this)
-        UniqueDeviceIDManager.init(this)
         val context = this
 
         //第一次启动初始化spf
@@ -96,8 +94,6 @@ class MainActivity : ComponentActivity() {
 
         // 这里用协程异步调用
         lifecycleScope.launch {
-            UniqueDeviceIDManager.init(applicationContext)
-
             Toast.makeText(applicationContext, "Loading...", Toast.LENGTH_SHORT).show()
             setContent {
                 Card(
@@ -146,39 +142,6 @@ class MainActivity : ComponentActivity() {
                             repeat(10) {
                                 Text("只能在随身WiFi上安装使用!!!", fontSize = 16.sp)
                             }
-                        }
-                    }
-                }
-                delay(4600)
-                exitProcess(-114514)
-            }
-
-            val isUnSupportDevice = withContext(Dispatchers.IO) { DeviceModelChecker.checkBlackList(applicationContext) }
-
-            if (isUnSupportDevice) {
-                Toast.makeText(applicationContext, "该设备不受支持,正在退出...", Toast.LENGTH_LONG).show()
-                setContent {
-                    Card(
-                        shape = RoundedCornerShape(16.dp), // 圆角
-                        elevation = CardDefaults.cardElevation(8.dp), // 阴影
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp) // 外边距
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(16.dp),
-                            verticalArrangement = Arrangement.Center,
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text("Device id:${UniqueDeviceIDManager.getUUID()}", fontSize = 14.sp)
-                            repeat(4) {
-                                Text("不受支持的设备！！", fontSize = 20.sp)
-                                Text("Unsupported device！！", fontSize = 20.sp)
-                            }
-                            Text("3秒后自动退出！！", fontSize = 20.sp)
-                            Text("Auto exit in 3 seconds！！", fontSize = 20.sp)
                         }
                     }
                 }

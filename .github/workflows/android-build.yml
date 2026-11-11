@@ -1,35 +1,94 @@
-name: Android Release CI
+name: Build private APK
 
 on:
   push:
-    branches: [ "http-server-version" ]
+    branches: [privacy/no-telemetry]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: private-apk-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  build-release:
-    runs-on: ubuntu-latest
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      ANDROID_BUILD_TOOLS: 35.0.0
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          persist-credentials: false
+
+      - name: Check source privacy
+        run: python3 scripts/check-privacy.py
+
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+        with:
+          distribution: temurin
           java-version: '17'
-          distribution: 'temurin'
           cache: gradle
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: '20'
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: app/frontEnd/package-lock.json
 
-      - name: Install Node.js dependencies
+      - name: Check frontend syntax
+        run: |
+          for script in app/frontEnd/public/script/*.js; do
+            node --check "$script"
+          done
+
+      - name: Install frontend dependencies
         working-directory: app/frontEnd
-        run: npm install --no-package-lock
+        run: npm ci --ignore-scripts --no-audit --no-fund
 
-      - name: Grant execute permission for gradlew
-        run: chmod +x ./gradlew
+      - name: Prepare Android SDK
+        run: sdkmanager "platforms;android-35" "build-tools;$ANDROID_BUILD_TOOLS"
 
-      - name: Build with tag version
-        run: ./gradlew assembleDebug
+      - name: Build release APK
+        run: |
+          chmod +x gradlew
+          ./gradlew --no-daemon --console=plain assembleRelease
+
+      - name: Sign and verify APK
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$KEYSTORE_BASE64"
+          test -n "$KEYSTORE_PASSWORD"
+          umask 077
+          keystore="$RUNNER_TEMP/release.p12"
+          trap 'rm -f "$keystore"' EXIT
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$keystore"
+          tools="$ANDROID_HOME/build-tools/$ANDROID_BUILD_TOOLS"
+          unsigned=(app/build/outputs/apk/release/*-unsigned.apk)
+          test "${#unsigned[@]}" -eq 1
+          "$tools/zipalign" -f -p 4 "${unsigned[0]}" "$RUNNER_TEMP/aligned.apk"
+          mkdir -p dist
+          "$tools/apksigner" sign \
+            --ks "$keystore" --ks-type PKCS12 --ks-key-alias ufi-tools \
+            --ks-pass env:KEYSTORE_PASSWORD --key-pass env:KEYSTORE_PASSWORD \
+            --out dist/UFI-TOOLS-private.apk "$RUNNER_TEMP/aligned.apk"
+          "$tools/apksigner" verify --verbose --print-certs dist/UFI-TOOLS-private.apk
+          python3 scripts/check-privacy.py dist/UFI-TOOLS-private.apk
+          "$tools/aapt" dump badging dist/UFI-TOOLS-private.apk > dist/apk-info.txt
+          git rev-parse HEAD > dist/source-commit.txt
+          (cd dist && sha256sum UFI-TOOLS-private.apk > SHA256SUMS)
+
+      - name: Upload APK
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: UFI-TOOLS-private-${{ github.run_number }}
+          path: dist/
+          if-no-files-found: error
+          retention-days: 7

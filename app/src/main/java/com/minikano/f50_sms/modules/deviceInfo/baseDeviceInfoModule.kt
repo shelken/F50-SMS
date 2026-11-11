@@ -8,7 +8,6 @@ import com.minikano.f50_sms.modules.BASE_TAG
 import com.minikano.f50_sms.modules.PREFS_NAME
 import com.minikano.f50_sms.utils.KanoLog
 import com.minikano.f50_sms.utils.KanoUtils
-import com.minikano.f50_sms.utils.UniqueDeviceIDManager
 import com.minikano.f50_sms.utils.calculateCpuUsage
 import com.minikano.f50_sms.utils.getCpuFreqJson
 import com.minikano.f50_sms.utils.getMemoryUsage
@@ -246,23 +245,6 @@ fun Route.baseDeviceInfoModule(context: Context) {
             call.response.headers.append("Access-Control-Allow-Origin", "*")
             call.respondText(
                 """{"error":"获取版本信息出错"}""",
-                ContentType.Application.Json,
-                HttpStatusCode.InternalServerError
-            )
-        }
-    }
-
-    get("/api/device_id") {
-        try {
-            val jsonResult = """{"device_id": "${UniqueDeviceIDManager.getUUID()}"}""".trimIndent()
-
-            call.response.headers.append("Access-Control-Allow-Origin", "*")
-            call.respondText(jsonResult, ContentType.Application.Json)
-        } catch (e: Exception) {
-            KanoLog.d("UFI_TOOLS_LOG", "获取设备id出错：${e.message}")
-            call.response.headers.append("Access-Control-Allow-Origin", "*")
-            call.respondText(
-                """{"error":"获取设备id出错"}""",
                 ContentType.Application.Json,
                 HttpStatusCode.InternalServerError
             )

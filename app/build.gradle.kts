@@ -13,10 +13,7 @@ plugins {
 val npmBuild by tasks.registering(Exec::class) {
     workingDir = file("frontEnd")
     doFirst {
-        println("✅ 当前 workingDir: $workingDir")
-        println("✅ 系统平台: ${System.getProperty("os.name")}")
-        println("✅ 环境变量 PATH:")
-        println(System.getenv("PATH"))
+        println("Building frontend assets")
     }
     commandLine = if (System.getProperty("os.name").startsWith("Windows")) {
         listOf("cmd", "/c", "npm", "run", "build")
@@ -50,14 +47,14 @@ tasks.register<Delete>("deleteDumpSymsFromApk") {
 android {
     namespace = "com.minikano.f50_sms"
     compileSdk = 35
+    buildToolsVersion = "35.0.0"
 
     defaultConfig {
         applicationId = "com.minikano.f50_sms"
         minSdk = 26
         targetSdk = 33
-        // 动态生成 versionCode 为 yyyyMMdd 格式
-        versionCode = SimpleDateFormat("yyyyMMdd").format(Date()).toInt()
-        versionName = "3.9.5"
+        versionCode = 2026020500 + (System.getenv("GITHUB_RUN_NUMBER")?.toInt() ?: 0)
+        versionName = "3.9.5-private"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -152,5 +149,4 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
-    debugImplementation(libs.firebase.crashlytics.buildtools)
 }
